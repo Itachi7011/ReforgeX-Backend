@@ -11,9 +11,9 @@ const compression = require('compression');
 
 
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 6000;
 
-const schedulerManager = require("./config/scheduler");
+// const schedulerManager = require("./config/scheduler");
 
 
 const PublicRoutes = require('./routes/publicRoutes');
@@ -129,7 +129,7 @@ mongoose.connect(process.env.MONGODB_URI, {
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
-     schedulerManager.initialize();
+    //  schedulerManager.initialize();
 });
 
 
