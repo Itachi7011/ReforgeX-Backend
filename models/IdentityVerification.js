@@ -5,122 +5,90 @@ const crypto = require("crypto");
    SUB SCHEMAS
 ================================= */
 
-const FileMetadataSchema =
+const IdentityDocumentSchema =
   new mongoose.Schema(
     {
-      originalFileName: String,
+      documentType: {
+        type: String,
+        enum: [
+          "passport",
+          "drivers_license",
+          "national_id",
+          "aadhaar",
+          "pan",
+          "voter_id",
+        ],
+        required: true,
+      },
 
-      mimeType: String,
+      documentNumber: {
+        type: String,
+        required: true,
+        select: false,
+      },
 
-      extension: String,
+      documentHash: {
+        type: String,
+        select: false,
+      },
 
-      sizeInBytes: Number,
+      issuingCountry: {
+        type: String,
+        required: true,
+      },
+
+      fullNameOnDocument: {
+        type: String,
+        required: true,
+      },
+
+      dateOfBirth: Date,
+
+      expiryDate: Date,
+
+      frontImage: {
+        url: String,
+        publicId: String,
+      },
+
+      backImage: {
+        url: String,
+        publicId: String,
+      },
 
       uploadedAt: {
         type: Date,
         default: Date.now,
       },
-
-      uploadedByIp: String,
-
-      storageProvider: {
-        type: String,
-        enum: [
-          "cloudinary",
-          "aws_s3",
-          "local",
-        ],
-        default: "cloudinary",
-      },
-
-      storageLocation: String,
     },
-    { _id: false }
+    { _id: true }
   );
 
-const OCRExtractionSchema =
+const SelfieVerificationSchema =
   new mongoose.Schema(
     {
-      extractedText: {
-        type: String,
-        select: false,
+      selfieImage: {
+        url: String,
+        publicId: String,
       },
 
-      extractedEntities: {
-        companyName: String,
-
-        employeeName: String,
-
-        designation: String,
-
-        salary: String,
-
-        issueDate: Date,
-
-        joiningDate: Date,
-
-        relievingDate: Date,
-
-        documentNumber: String,
-      },
-
-      extractionConfidence: {
+      faceMatchConfidence: {
         type: Number,
         default: 0,
       },
 
-      extractionEngine: {
-        type: String,
-        enum: [
-          "google_vision",
-          "aws_textract",
-          "tesseract",
-          "azure_form_recognizer",
-        ],
-      },
-
-      extractedAt: Date,
-    },
-    { _id: false }
-  );
-
-const AuthenticityChecksSchema =
-  new mongoose.Schema(
-    {
-      metadataIntegrityPassed: {
+      livenessCheckPassed: {
         type: Boolean,
         default: false,
       },
 
-      tamperingDetected: {
-        type: Boolean,
-        default: false,
+      aiDetectionMetadata: {
+        facialSimilarity: Number,
+        spoofDetected: Boolean,
+        multipleFacesDetected: Boolean,
       },
 
-      photoshopDetected: {
-        type: Boolean,
-        default: false,
-      },
-
-      suspiciousFontsDetected: {
-        type: Boolean,
-        default: false,
-      },
-
-      inconsistentMetadataDetected: {
-        type: Boolean,
-        default: false,
-      },
-
-      aiGeneratedProbability: {
-        type: Number,
-        default: 0,
-      },
-
-      authenticityConfidence: {
-        type: Number,
-        default: 0,
-      },
+      verifiedAt: Date,
     },
     { _id: false }
   );
@@ -144,12 +112,13 @@ const ReviewerDecisionSchema =
 
       confidenceScore: {
         type: Number,
-        default: 0,
+        min: 0,
+        max: 100,
       },
 
       notes: String,
 
-      reviewedAt: {
+      createdAt: {
         type: Date,
         default: Date.now,
       },
@@ -161,17 +130,18 @@ const ReviewerDecisionSchema =
    MAIN SCHEMA
 ================================= */
 
-const DocumentVerificationSchema =
+const IdentityVerificationSchema =
   new mongoose.Schema(
     {
       /* =================================
-         RELATIONS
+         USER RELATION
       ================================= */
 
       userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: `${process.env.APP_NAME}_User`,
         required: true,
+        unique: true,
         index: true,
       },
 
@@ -182,111 +152,78 @@ const DocumentVerificationSchema =
         index: true,
       },
 
-      employmentVerificationId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: `${process.env.APP_NAME}_EmploymentVerification`,
-      },
-
-      identityVerificationId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: `${process.env.APP_NAME}_IdentityVerification`,
-      },
-
       /* =================================
-         DOCUMENT TYPE
+         IDENTITY DOCUMENTS
       ================================= */
 
-      documentType: {
-        type: String,
-        enum: [
-          "payslip",
-          "offer_letter",
-          "experience_letter",
-          "termination_letter",
-          "identity_document",
-          "resume",
-          "certificate",
-        ],
-        required: true,
-        index: true,
-      },
+      documents: [
+        IdentityDocumentSchema,
+      ],
 
       /* =================================
-         FILE DATA
+         SELFIE VERIFICATION
       ================================= */
 
-      file: {
-        url: {
-          type: String,
-          required: true,
-        },
-
-        publicId: String,
-
-        secureUrl: String,
-      },
-
-      fileMetadata:
-        FileMetadataSchema,
+      selfieVerification:
+        SelfieVerificationSchema,
 
       /* =================================
-         DOCUMENT SECURITY
-      ================================= */
-
-      fileHash: {
-        type: String,
-        select: false,
-        index: true,
-      },
-
-      checksumAlgorithm: {
-        type: String,
-        default: "sha256",
-      },
-
-      encrypted: {
-        type: Boolean,
-        default: false,
-      },
-
-      /* =================================
-         OCR & AI EXTRACTION
-      ================================= */
-
-      ocrExtraction:
-        OCRExtractionSchema,
-
-      /* =================================
-         AUTHENTICITY CHECKS
-      ================================= */
-
-      authenticityChecks:
-        AuthenticityChecksSchema,
-
-      /* =================================
-         GLOBAL STATUS
+         STATUS
       ================================= */
 
       verificationStatus: {
         type: String,
         enum: [
           "pending",
-          "processing",
+          "submitted",
           "under_review",
-          "verified",
+          "approved",
           "rejected",
-          "flagged",
+          "resubmission_required",
         ],
         default: "pending",
         index: true,
       },
 
-      overallConfidenceScore: {
+      verificationConfidence: {
         type: Number,
         min: 0,
         max: 100,
         default: 0,
         index: true,
+      },
+
+      identityMatchScore: {
+        type: Number,
+        min: 0,
+        max: 100,
+        default: 0,
+      },
+
+      /* =================================
+         AUTOMATED CHECKS
+      ================================= */
+
+      automatedChecks: {
+        duplicateIdentityDetected: {
+          type: Boolean,
+          default: false,
+        },
+
+        fakeDocumentDetected: {
+          type: Boolean,
+          default: false,
+        },
+
+        mismatchedIdentityDetected: {
+          type: Boolean,
+          default: false,
+        },
+
+        suspiciousMetadataDetected: {
+          type: Boolean,
+          default: false,
+        },
       },
 
       /* =================================
@@ -307,7 +244,7 @@ const DocumentVerificationSchema =
       },
 
       /* =================================
-         FRAUD DETECTION
+         FRAUD SYSTEM
       ================================= */
 
       fraudRiskLevel: {
@@ -343,21 +280,26 @@ const DocumentVerificationSchema =
       ],
 
       /* =================================
-         PROCESSING METADATA
+         SYSTEM FLAGS
       ================================= */
 
-      processingStartedAt: Date,
+      requiresReverification: {
+        type: Boolean,
+        default: false,
+      },
 
-      processingCompletedAt: Date,
+      reverificationReason: String,
 
-      processingDurationMs: Number,
-
-      processingEngineVersion:
-        String,
+      lastVerifiedAt: Date,
 
       /* =================================
          AUDIT
       ================================= */
+
+      submissionAttempts: {
+        type: Number,
+        default: 0,
+      },
 
       auditTrail: [
         {
@@ -394,23 +336,19 @@ const DocumentVerificationSchema =
    INDEXES
 ================================= */
 
-DocumentVerificationSchema.index({
-  verificationStatus: 1,
+// IdentityVerificationSchema.index({
+//   verificationStatus: 1,
+// });
+
+IdentityVerificationSchema.index({
+  verificationConfidence: -1,
 });
 
-DocumentVerificationSchema.index({
-  documentType: 1,
-});
+// IdentityVerificationSchema.index({
+//   fraudRiskLevel: 1,
+// });
 
-DocumentVerificationSchema.index({
-  overallConfidenceScore: -1,
-});
-
-DocumentVerificationSchema.index({
-  fraudRiskLevel: 1,
-});
-
-DocumentVerificationSchema.index({
+IdentityVerificationSchema.index({
   createdAt: -1,
 });
 
@@ -418,12 +356,12 @@ DocumentVerificationSchema.index({
    VIRTUALS
 ================================= */
 
-DocumentVerificationSchema.virtual(
+IdentityVerificationSchema.virtual(
   "isVerified"
 ).get(function () {
   return (
     this.verificationStatus ===
-    "verified"
+    "approved"
   );
 });
 
@@ -431,40 +369,42 @@ DocumentVerificationSchema.virtual(
    PRE SAVE HOOKS
 ================================= */
 
-// GENERATE FILE HASH
-DocumentVerificationSchema.pre(
+// HASH DOCUMENT NUMBERS
+IdentityVerificationSchema.pre(
   "save",
   function (next) {
-    if (
-      this.file?.url &&
-      !this.fileHash
-    ) {
-      this.fileHash =
-        crypto
-          .createHash("sha256")
-          .update(this.file.url)
-          .digest("hex");
-    }
+    this.documents.forEach(
+      (doc) => {
+        if (
+          doc.documentNumber &&
+          !doc.documentHash
+        ) {
+          doc.documentHash =
+            crypto
+              .createHash("sha256")
+              .update(
+                doc.documentNumber
+              )
+              .digest("hex");
+        }
+      }
+    );
 
     next();
   }
 );
 
-// DETERMINE MANUAL REVIEW
-DocumentVerificationSchema.pre(
+// AUTO DETECT MANUAL REVIEW
+IdentityVerificationSchema.pre(
   "save",
   function (next) {
-    const checks =
-      this.authenticityChecks;
-
-    if (!checks) return next();
+    const auto =
+      this.automatedChecks;
 
     const suspicious =
-      checks.tamperingDetected ||
-      checks.photoshopDetected ||
-      checks.inconsistentMetadataDetected ||
-      checks.aiGeneratedProbability >
-        70;
+      auto.duplicateIdentityDetected ||
+      auto.fakeDocumentDetected ||
+      auto.mismatchedIdentityDetected;
 
     this.manualReviewRequired =
       suspicious;
@@ -482,55 +422,22 @@ DocumentVerificationSchema.pre(
    INSTANCE METHODS
 ================================= */
 
-// START PROCESSING
-DocumentVerificationSchema.methods.startProcessing =
-  async function () {
-    this.verificationStatus =
-      "processing";
+// ADD DOCUMENT
+IdentityVerificationSchema.methods.addDocument =
+  async function (documentData) {
+    this.documents.push(
+      documentData
+    );
 
-    this.processingStartedAt =
-      new Date();
-
-    await this.save();
-  };
-
-// COMPLETE PROCESSING
-DocumentVerificationSchema.methods.completeProcessing =
-  async function () {
-    this.processingCompletedAt =
-      new Date();
-
-    this.processingDurationMs =
-      this.processingCompletedAt -
-      this.processingStartedAt;
+    this.submissionAttempts += 1;
 
     await this.save();
-  };
 
-// UPDATE OCR DATA
-DocumentVerificationSchema.methods.updateOCRExtraction =
-  async function (
-    extractionData
-  ) {
-    this.ocrExtraction =
-      extractionData;
-
-    await this.save();
-  };
-
-// UPDATE AUTHENTICITY
-DocumentVerificationSchema.methods.updateAuthenticityChecks =
-  async function (
-    checks
-  ) {
-    this.authenticityChecks =
-      checks;
-
-    await this.save();
+    return this;
   };
 
 // ASSIGN REVIEWER
-DocumentVerificationSchema.methods.assignReviewer =
+IdentityVerificationSchema.methods.assignReviewer =
   async function (
     reviewerId
   ) {
@@ -543,17 +450,20 @@ DocumentVerificationSchema.methods.assignReviewer =
     await this.save();
   };
 
-// APPROVE DOCUMENT
-DocumentVerificationSchema.methods.approveDocument =
+// APPROVE VERIFICATION
+IdentityVerificationSchema.methods.approveVerification =
   async function (
     reviewerId,
     confidence = 95
   ) {
     this.verificationStatus =
-      "verified";
+      "approved";
 
-    this.overallConfidenceScore =
+    this.verificationConfidence =
       confidence;
+
+    this.lastVerifiedAt =
+      new Date();
 
     this.reviewerDecision = {
       reviewerId,
@@ -565,8 +475,8 @@ DocumentVerificationSchema.methods.approveDocument =
     await this.save();
   };
 
-// REJECT DOCUMENT
-DocumentVerificationSchema.methods.rejectDocument =
+// REJECT VERIFICATION
+IdentityVerificationSchema.methods.rejectVerification =
   async function (
     reviewerId,
     notes = ""
@@ -584,7 +494,7 @@ DocumentVerificationSchema.methods.rejectDocument =
   };
 
 // ADD FRAUD SIGNAL
-DocumentVerificationSchema.methods.addFraudSignal =
+IdentityVerificationSchema.methods.addFraudSignal =
   async function (
     signal,
     severity = "medium"
@@ -605,7 +515,7 @@ DocumentVerificationSchema.methods.addFraudSignal =
   };
 
 // ADD AUDIT EVENT
-DocumentVerificationSchema.methods.addAuditEvent =
+IdentityVerificationSchema.methods.addAuditEvent =
   async function (
     action,
     actorId,
@@ -620,21 +530,29 @@ DocumentVerificationSchema.methods.addAuditEvent =
     await this.save();
   };
 
+// SOFT DELETE
+IdentityVerificationSchema.methods.softDelete =
+  async function () {
+    this.isSoftDeleted = true;
+
+    await this.save();
+  };
+
 // SAFE PUBLIC DATA
-DocumentVerificationSchema.methods.getPublicVerification =
+IdentityVerificationSchema.methods.getPublicVerification =
   function () {
     return {
-      documentType:
-        this.documentType,
-
       verificationStatus:
         this.verificationStatus,
 
-      overallConfidenceScore:
-        this.overallConfidenceScore,
+      verificationConfidence:
+        this.verificationConfidence,
 
       fraudRiskLevel:
         this.fraudRiskLevel,
+
+      lastVerifiedAt:
+        this.lastVerifiedAt,
     };
   };
 
@@ -642,8 +560,8 @@ DocumentVerificationSchema.methods.getPublicVerification =
    STATIC METHODS
 ================================= */
 
-// FIND FLAGGED DOCUMENTS
-DocumentVerificationSchema.statics.findFlaggedDocuments =
+// FIND HIGH RISK IDENTITIES
+IdentityVerificationSchema.statics.findHighRisk =
   async function () {
     return this.find({
       fraudRiskLevel: {
@@ -655,7 +573,7 @@ DocumentVerificationSchema.statics.findFlaggedDocuments =
   };
 
 // FIND REVIEW QUEUE
-DocumentVerificationSchema.statics.findReviewQueue =
+IdentityVerificationSchema.statics.findReviewQueue =
   async function () {
     return this.find({
       verificationStatus:
@@ -671,9 +589,9 @@ DocumentVerificationSchema.statics.findReviewQueue =
 
 module.exports =
   mongoose.models[
-    `${process.env.APP_NAME}_DocumentVerification`
+    `${process.env.APP_NAME}_IdentityVerification`
   ] ||
   mongoose.model(
-    `${process.env.APP_NAME}_DocumentVerification`,
-    DocumentVerificationSchema
+    `${process.env.APP_NAME}_IdentityVerification`,
+    IdentityVerificationSchema
   );

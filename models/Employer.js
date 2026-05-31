@@ -340,13 +340,13 @@ const EmployerSchema = new mongoose.Schema(
    INDEXES
 ================================= */
 
-EmployerSchema.index({
-  companyName: 1,
-});
+// EmployerSchema.index({
+//   companyName: 1,
+// });
 
-EmployerSchema.index({
-  companyDomain: 1,
-});
+// EmployerSchema.index({
+//   companyDomain: 1,
+// });
 
 EmployerSchema.index({
   recruiterType: 1,

@@ -249,9 +249,9 @@ TrustScoreSchema.index({
   totalTrustScore: -1,
 });
 
-TrustScoreSchema.index({
-  trustTier: 1,
-});
+// TrustScoreSchema.index({
+//   trustTier: 1,
+// });
 
 TrustScoreSchema.index({
   percentile: -1,

@@ -445,17 +445,17 @@ const EmploymentVerificationSchema =
    INDEXES
 ================================= */
 
-EmploymentVerificationSchema.index({
-  verificationStatus: 1,
-});
+// EmploymentVerificationSchema.index({
+//   verificationStatus: 1,
+// });
 
 EmploymentVerificationSchema.index({
   overallConfidenceScore: -1,
 });
 
-EmploymentVerificationSchema.index({
-  fraudRiskLevel: 1,
-});
+// EmploymentVerificationSchema.index({
+//   fraudRiskLevel: 1,
+// });
 
 EmploymentVerificationSchema.index({
   "employmentRecords.companyName": 1,

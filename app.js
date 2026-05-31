@@ -8,17 +8,18 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const hpp = require('hpp');
 const compression = require('compression');
-const Users = require('./models/User/Users');
 
 
 
 const PORT = process.env.PORT || 5000;
 
+const schedulerManager = require("./config/scheduler");
 
-const PublicRoutes = require('./routes/public');
-const AdminRoutes = require('./routes/admin');
-const SubscriptionPlanRoutes = require('./routes/subscriptionPlans');
-const UsersRoutes = require('./routes/users');
+
+const PublicRoutes = require('./routes/publicRoutes');
+const AdminRoutes = require('./routes/adminRoutes');
+// const SubscriptionPlanRoutes = require('./routes/subscriptionPlans');
+const UsersRoutes = require('./routes/userRoutes');
 
 
 // Trust only Render's proxy (more secure)
@@ -58,7 +59,7 @@ app.use(compression());
 // app.use('/api/users', userRoutes);
 app.use('/api/public', PublicRoutes);
 app.use('/api/admin', AdminRoutes);
-app.use('/api/subscription-plans', SubscriptionPlanRoutes);
+// app.use('/api/subscription-plans', SubscriptionPlanRoutes);
 app.use('/api/users', UsersRoutes);
 
 // Add this test route to your app.js
@@ -128,6 +129,7 @@ mongoose.connect(process.env.MONGODB_URI, {
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+     schedulerManager.initialize();
 });
 
 

@@ -300,17 +300,17 @@ VerificationSchema.index({
   overallConfidenceScore: -1,
 });
 
-VerificationSchema.index({
-  fraudRiskLevel: 1,
-});
+// VerificationSchema.index({
+//   fraudRiskLevel: 1,
+// });
 
-VerificationSchema.index({
-  verificationBadgeLevel: 1,
-});
+// VerificationSchema.index({
+//   verificationBadgeLevel: 1,
+// });
 
-VerificationSchema.index({
-  reviewPriority: 1,
-});
+// VerificationSchema.index({
+//   reviewPriority: 1,
+// });
 
 VerificationSchema.index({
   createdAt: -1,
